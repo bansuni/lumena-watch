@@ -2,7 +2,7 @@ name: kpaa-job-check
 
 on:
   schedule:
-    - cron: "15,45 * * * *"   # 매시 15분, 45분 (루메나와 시간 안 겹치게)
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 permissions:
