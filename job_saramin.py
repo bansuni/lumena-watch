@@ -11,6 +11,8 @@ MOBILE_VIEW = "https://m.saramin.co.kr/job-search/view?rec_idx=%s"
 SEEN_FILE = "seen_saramin.txt"
 # ★ 회사명(corp_name)에 아래 단어가 들어가면 제외 (특허사무소 안 감) ★
 EXCLUDE_COMPANY = ["특허법인", "특허법률사무소", "특허사무소"]
+# ★ 제목(title)에 이 단어가 들어간 공고만 알림 ★
+TITLE_MUST_INCLUDE = "변리사"
 GEMINI_MODELS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"]
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
@@ -127,8 +129,10 @@ def main():
     if not items:
         print("[ERROR] 결과 0건 - 구조 변경/차단 가능성"); sys.exit(0)
 
-    kept = [it for it in items if not excluded(it["corp"])]
-    print("[INFO] 특허법인/특허사무소 제외 후 %d건" % len(kept))
+    kept = [it for it in items
+            if not excluded(it["corp"]) and TITLE_MUST_INCLUDE in it["title"]]
+    print("[INFO] 제목에 '%s' 포함 + 특허법인/특허사무소 제외 후 %d건"
+          % (TITLE_MUST_INCLUDE, len(kept)))
 
     seen = read_seen()
     first_run = seen is None
@@ -143,8 +147,8 @@ def main():
             seen.add(it["id"])
         write_seen(seen)
         tg("[감시 시작] 사람인 '변리사' 구인공고 감시를 시작했습니다. "
-           "회사명에 특허법인/특허법률사무소/특허사무소가 들어가면 제외하고, "
-           "새 공고는 상세내용을 요약해 보내드립니다. (현재 %d건은 기존 글로 처리)" % len(kept))
+           "제목에 '변리사'가 들어간 공고만, 회사명에 특허법인/특허법률사무소/특허사무소가 "
+           "들어가면 제외하고, 상세내용을 요약해 보내드립니다. (현재 %d건은 기존 글로 처리)" % len(kept))
         print("[INFO] 첫 실행 베이스라인 기록"); return
 
     for it in reversed(new_items):
