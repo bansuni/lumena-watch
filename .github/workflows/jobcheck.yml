@@ -1,0 +1,44 @@
+name: kpaa-job-check
+
+on:
+  schedule:
+    - cron: "15,45 * * * *"   # 매시 15분, 45분 (루메나와 시간 안 겹치게)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kpaa-job-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run KPAA job check
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python job_kpaa.py
+
+      - name: Save seen list
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_kpaa.txt || true
+          git commit -m "update seen_kpaa" || echo "no change to commit"
+          git pull --rebase --autostash || true
+          git push || echo "nothing to push"
