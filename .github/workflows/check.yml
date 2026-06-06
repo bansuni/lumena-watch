@@ -1,0 +1,42 @@
+name: lumena-stock-check
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # 30분마다 자동 실행 (UTC 기준이지만 주기라 상관없음)
+  workflow_dispatch:          # 수동 실행 버튼 (검증용)
+
+permissions:
+  contents: write             # 상태 파일(state.txt) 저장용
+
+concurrency:
+  group: lumena-stock-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run stock check
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check_stock.py
+
+      - name: Save state
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state.txt || true
+          git commit -m "update stock state" || echo "no change to commit"
+          git push || echo "nothing to push"
